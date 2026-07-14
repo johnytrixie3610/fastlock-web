@@ -10,9 +10,10 @@ const API_KEY =
   '';
 const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 
-function RouteDisplay({ origin, destination, onPriceCalculated }: {
+function RouteDisplay({ origin, destination, serviceType, onPriceCalculated }: {
   origin: string;
   destination: string;
+  serviceType: 'doors' | 'car';
   onPriceCalculated: (price: number) => void;
 }) {
   const map = useMap();
@@ -62,7 +63,7 @@ function RouteDisplay({ origin, destination, onPriceCalculated }: {
           surcharge += 400;
         }
 
-        const basePrice = 800;
+        const basePrice = serviceType === 'car' ? 1000 : 800;
         const distancePrice = Math.round(distKm * 35);
         const totalPrice = basePrice + distancePrice + surcharge;
         const roundedPrice = Math.round(totalPrice / 10) * 10;
@@ -72,7 +73,7 @@ function RouteDisplay({ origin, destination, onPriceCalculated }: {
     }).catch(console.error);
 
     return () => polylinesRef.current.forEach(p => p.setMap(null));
-  }, [routesLib, map, origin, destination, onPriceCalculated]);
+  }, [routesLib, map, origin, destination, serviceType, onPriceCalculated]);
 
   return null;
 }
@@ -119,6 +120,7 @@ const Calculator = () => {
   const [destinationCoords, setDestinationCoords] = useState<google.maps.LatLngLiteral | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
+  const [serviceType, setServiceType] = useState<'doors' | 'car'>('doors');
 
   const placesLib = useMapsLibrary('places');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -182,32 +184,58 @@ const Calculator = () => {
           Jsme transparentní. Zjistěte orientační cenu předem.
         </p>
 
-        <form onSubmit={handleCalculate} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <MapPin className="w-5 h-5 text-gray-500" />
-            </div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Zadejte vaši adresu (Praha a okolí)..."
-              className="w-full bg-brand-gray border border-brand-lightgray text-white placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all font-medium"
-              required
-            />
+        <form onSubmit={handleCalculate} className="flex flex-col gap-4">
+          <div className="flex bg-brand-gray p-1 rounded-xl border border-brand-lightgray">
+            <button
+              type="button"
+              onClick={() => setServiceType('doors')}
+              className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${
+                serviceType === 'doors' 
+                  ? 'bg-brand-orange text-brand-black shadow-md' 
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Dveře
+            </button>
+            <button
+              type="button"
+              onClick={() => setServiceType('car')}
+              className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-all ${
+                serviceType === 'car' 
+                  ? 'bg-brand-orange text-brand-black shadow-md' 
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Auto
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={isCalculating || !address.trim()}
-            className="bg-brand-orange text-brand-black font-heading font-bold italic px-8 py-4 rounded-xl uppercase tracking-wider hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            {isCalculating ? (
-              <span className="w-5 h-5 border-2 border-brand-black border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              <>Spočítat <ArrowRight className="w-5 h-5" /></>
-            )}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <MapPin className="w-5 h-5 text-gray-500" />
+              </div>
+              <input
+                ref={inputRef}
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Zadejte vaši adresu (Praha a okolí)..."
+                className="w-full bg-brand-gray border border-brand-lightgray text-white placeholder-gray-500 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all font-medium"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isCalculating || !address.trim()}
+              className="bg-brand-orange text-brand-black font-heading font-bold italic px-8 py-4 rounded-xl uppercase tracking-wider hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              {isCalculating ? (
+                <span className="w-5 h-5 border-2 border-brand-black border-t-transparent rounded-full animate-spin"></span>
+              ) : (
+                <>Spočítat <ArrowRight className="w-5 h-5" /></>
+              )}
+            </button>
+          </div>
         </form>
 
         <div className="w-full h-64 sm:h-80 bg-brand-gray border border-brand-lightgray rounded-xl overflow-hidden relative flex items-center justify-center mt-8">
@@ -233,6 +261,7 @@ const Calculator = () => {
               <RouteDisplay 
                 origin="V Jezírkách, Praha" 
                 destination={destination} 
+                serviceType={serviceType}
                 onPriceCalculated={handlePriceCalculated} 
               />
             )}
